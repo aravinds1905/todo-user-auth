@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo List</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #b3d9f7; /* Light blue background */
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .container {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      padding: 20px;
+      width: 90%;
+      max-width: 400px;
+      text-align: center;
+    }
+    h1 {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      color: #333;
+    }
+    .form-group {
+      display: flex;
+      margin-bottom: 15px;
+    }
+    .form-group input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px 0 0 6px;
+      outline: none;
+    }
+    .form-group button {
+      background-color: #28a745; /* Green button */
+      border: none;
+      padding: 0 15px;
+      border-radius: 0 6px 6px 0;
+      color: white;
+      font-size: 1.2em;
+      cursor: pointer;
+    }
+    .form-group button:hover {
+      background-color: #218838;
+    }
+    .todo-list {
+      margin-top: 20px;
+      text-align: left;
+    }
+    .todo-item {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .todo-item.completed {
+      text-decoration: line-through;
+      color: #6c757d; /* Grey color for completed tasks */
+    }
+    .todo-item button {
+      background-color: #dc3545; /* Red button for delete */
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .todo-item button:hover {
+      background-color: #c82333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ToDo List</h1>
+    <div class="form-group">
+      <input type="text" id="todo-title" placeholder="Add a new todo">
+      <button onclick="addTodo()">+</button>
+    </div>
+    <div class="todo-list" id="todo-list"></div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000';
+    const token = localStorage.getItem('token');
+
+    if (!token) {
+      alert('Unauthorized access. Redirecting to login page.');
+      window.location.href = 'login.html';
+    }
+
+    function fetchTodos() {
+      fetch(`${API_URL}/todos`, {
+        headers: { 'Authorization': token }
+      })
+        .then(response => response.json())
+        .then(todos => {
+          const todoList = document.getElementById('todo-list');
+          todoList.innerHTML = '';
+          todos.forEach(todo => {
+            const todoDiv = document.createElement('div');
+            todoDiv.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+            todoDiv.innerHTML = `
+              <span>
+                <input 
+                  type="checkbox" 
+                  ${todo.completed ? 'checked' : ''} 
+                  onchange="toggleComplete(${todo.id}, this.checked)"
+                >
+                ${todo.title}
+              </span>
+              <button onclick="deleteTodo(${todo.id})">Delete</button>
+            `;
+            todoList.appendChild(todoDiv);
+          });
+        });
+    }
+
+    function addTodo() {
+      const title = document.getElementById('todo-title').value;
+      if (!title.trim()) {
+        alert('Please enter a todo.');
+        return;
+      }
+
+      fetch(`${API_URL}/todos`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({ title, completed: false })
+      })
+        .then(response => {
+          if (response.ok) {
+            document.getElementById('todo-title').value = '';
+            fetchTodos();
+          } else {
+            alert('Error adding todo');
+          }
+        });
+    }
+
+    function deleteTodo(id) {
+      fetch(`${API_URL}/todos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': token }
+      })
+        .then(response => {
+          if (response.ok) {
+            fetchTodos();
+          } else {
+            alert('Error deleting todo');
+          }
+        });
+    }
+
+    function toggleComplete(id, isCompleted) {
+      fetch(`${API_URL}/todos/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token
+        },
+        body: JSON.stringify({ completed: isCompleted })
+      })
+        .then(response => {
+          if (response.ok) {
+            fetchTodos();
+          } else {
+            alert('Error updating todo status');
+          }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchTodos);
+  </script>
+</body>
+</html>
